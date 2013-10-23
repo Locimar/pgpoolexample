@@ -1,0 +1,12 @@
+#! /bin/sh 
+
+PSQL=/usr/bin/psql 
+LOGGER="/usr/bin/logger -i -p local0.info -t pgpool" 
+BASENAME=`/usr/bin/basename $0` 
+ID=`/usr/bin/id -un` 
+
+$LOGGER "Executing $BASENAME as user $ID" 
+$LOGGER "Executing pg_switch_xlog" 
+$PSQL -d postgres -c 'select pg_switch_xlog()' 
+
+exit 0

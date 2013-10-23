@@ -1,0 +1,15 @@
+#! /bin/sh 
+
+SSH=/usr/bin/ssh 
+LOGGER="/usr/bin/logger -i -p local0.info -t pgpool" 
+BASENAME=`/usr/bin/basename $0` 
+ID=`/usr/bin/id -un` 
+
+DST_HOST=$1
+DST_DIR=$2
+
+$LOGGER "Executing $BASENAME as user $ID"
+$LOGGER "Starting remote PostgreSQL server"
+$SSH -T $DST_HOST '/usr/bin/pg_ctlcluster 9.3 main start' 2>/dev/null 1>/dev/null 
+
+exit 0

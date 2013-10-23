@@ -1,0 +1,17 @@
+#! /bin/sh 
+
+LOGGER="/usr/bin/logger -i -p local0.info -t pgpool" 
+BASENAME=`/usr/bin/basename $0` 
+ID=`/usr/bin/id -un` 
+
+# $1 = node id 
+# $2 = host name 
+# $3 = port number 
+# $4 = database cluster path 
+# $5 = new master node id 
+# $6 = old master node id 
+
+$LOGGER "Executing $BASENAME as user $ID" 
+$LOGGER "Failback of node $1 at hostname $2. New master node is $5. Old master node was $6." 
+ 
+ exit 0

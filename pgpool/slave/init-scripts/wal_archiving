@@ -1,0 +1,47 @@
+#!/bin/sh
+
+SED=/bin/sed
+PSQL=/usr/bin/psql
+PGDIR="/etc/postgresql/9.3/main"
+PGCONF="postgresql.conf"
+UNAME=/bin/uname
+HOST=`$UNAME -n`
+
+test -x $PSQL || exit 0
+test -f $PGDIR/$PGCONF || exit 0
+
+case "$1" in
+    start)
+        echo -n "Activating WAL archiving: "
+        $SED -r -e "s/\s*archive_command\s*=.*/archive_command = '\/bin\/cp %p \/data\/pg_xlog_archive\/%f'/" $PGDIR/$PGCONF > /tmp/$PGCONF
+        chmod 644 /tmp/$PGCONF
+        mv --force /tmp/$PGCONF $PGDIR/
+        /etc/init.d/postgresql reload 2>&1 > /dev/null
+        echo "done."
+        ;;
+
+    stop)
+        echo -n "Deactivating WAL archiving: "
+        $SED -r -e "s/\s*archive_command\s*=.*/archive_command = 'exit 0'/" $PGDIR/$PGCONF > /tmp/$PGCONF
+        chmod 644 /tmp/$PGCONF
+        mv --force /tmp/$PGCONF $PGDIR/
+        /etc/init.d/postgresql reload 2>&1 > /dev/null
+        echo "done."
+        ;;
+
+    status)
+        # Alternate way: SELECT setting FROM pg_settings WHERE name = 'archive_command'
+        am=`$PSQL -t -U pgpool2 -h $HOST -d postgres -c 'SHOW archive_mode' | $SED -r -e 's/^\s*//;s/\s*$//'`
+        ac=`$PSQL -t -U pgpool2 -h $HOST -d postgres -c 'SHOW archive_command' | $SED -r -e 's/^\s*//;s/\s*$//'`
+        echo "archive_mode = $am"
+        echo "archive_command = '$ac'"
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+        ;;
+
+esac
+
+exit 0

@@ -1,0 +1,51 @@
+#!/bin/sh 
+
+PSQL=/usr/bin/psql 
+SCP=/usr/bin/scp 
+SSH=/usr/bin/ssh 
+LOGGER="/usr/bin/logger -i -p local0.info -t pgpool" 
+RSYNC="/usr/bin/rsync --archive --quiet --compress --rsh=$SSH --delete" 
+BASENAME=`/usr/bin/basename $0` 
+HOSTNAME=`/bin/hostname` 
+ID=`/usr/bin/id -un` 
+
+# $1 = Database cluster path of a master node. 
+# $2 = Hostname of a recovery target node. 
+# $3 = Database cluster path of a recovery target node. 
+
+PG_HOME=/data 
+SRC_DATA=$1 
+DST_HOST=$2 
+DST_DATA=$3 
+
+$LOGGER "Executing $BASENAME as user $ID" 
+
+$LOGGER "Executing pg_start_backup" 
+$PSQL -d postgres -c "select pg_start_backup('pgpool-recovery')" 
+
+$LOGGER "Creating file recovery.conf" 
+echo "restore_command = '$SCP $HOSTNAME:$PG_HOME/pg_xlog_archive/%f %p'" > $SRC_DATA/recovery.conf 
+
+$LOGGER "Rsyncing directory base" 
+$RSYNC $SRC_DATA/base/ $DST_HOST:$DST_DATA/base/ 
+$LOGGER "Rsyncing directory global" 
+$RSYNC $SRC_DATA/global/ $DST_HOST:$DST_DATA/global/ 
+$LOGGER "Rsyncing directory pg_clog" 
+$RSYNC $SRC_DATA/pg_clog/ $DST_HOST:$DST_DATA/pg_clog/ 
+$LOGGER "Rsyncing directory pg_multixact" 
+$RSYNC $SRC_DATA/pg_multixact/ $DST_HOST:$DST_DATA/pg_multixact/ 
+$LOGGER "Rsyncing directory pg_subtrans" 
+$RSYNC $SRC_DATA/pg_subtrans/ $DST_HOST:$DST_DATA/pg_subtrans/ 
+$LOGGER "Rsyncing directory pg_tblspc" 
+$RSYNC $SRC_DATA/pg_tblspc/ $DST_HOST:$DST_DATA/pg_tblspc/ 
+$LOGGER "Rsyncing directory pg_twophase" 
+$RSYNC $SRC_DATA/pg_twophase/ $DST_HOST:$DST_DATA/pg_twophase/ 
+$LOGGER "Rsyncing directory pg_xlog" 
+$RSYNC $SRC_DATA/pg_xlog/ $DST_HOST:$DST_DATA/pg_xlog/ 
+$LOGGER "Rsyncing file recovery.conf (with source deletion)" 
+$RSYNC --remove-source-files $SRC_DATA/recovery.conf $DST_HOST:$DST_DATA/ 
+
+$LOGGER "Executing pg_stop_backup" 
+$PSQL -d postgres -c 'select pg_stop_backup()' 
+
+exit 0
